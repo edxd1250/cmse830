@@ -1,0 +1,4 @@
+RevisionID: int Primary Key 
+ArticleName: varchar(100) 
+EditDate: date 
+UserName: varchar(50) 
