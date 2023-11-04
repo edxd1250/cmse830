@@ -6,10 +6,11 @@ import streamlit as st
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+from streamlit_option_menu import option_menu
 
 
-students = pd.read_csv("student-mat.csv")
-students['Average'] = students[['G1', 'G2', 'G3']].mean(axis=1).round(2)
+
+
 
 #define functions
 def set_select_palette(series,select, max_color = 'orange', other_color = 'lightgrey'):
@@ -33,1367 +34,546 @@ def select_bar_column_pallete(values, select, sel_color = 'orange', other_color 
             pal.append(other_color)
     return pal
 
+def set_comparison_select(variable, varname='default', title='x', xaxis_title='x', yaxis_title="Average Score", ticktext=0,tickvals=0, key=0):
+    
+    period = st.selectbox("Choose a Time Period to Highlight", ["Average", "G1", "G2", "G3"], index=3, key= f'tab{key}per')
+    col1, col2 = st.columns([5,1])
+    if varname == 'default':
+        title=f'{variable.title()} Averages Over Time'
+        xaxis_title=variable.title()
+    else:
+        title=f'{varname} Averages Over Time'
+        xaxis_title=varname
+
+    with col2:
+        columns = []
+        if period == "Average":
+            avgbut = st.toggle('Average', True, disabled=True, key=f'tab{key}avg')
+            if avgbut:
+                columns += ["Average"]
+            G1but = st.toggle('G1', key=f'tab{key}G1')
+            if G1but:
+                columns += ["G1"]
+            G2but = st.toggle('G2', key=f'tab{key}G2')
+            if G2but:
+                columns += ["G2"]
+            G3but = st.toggle('G3', key=f'tab{key}G3')
+            if G3but:
+                columns += ["G3"]
+            colorscheme = select_bar_column_pallete(columns, period)
+        
+        if period == "G1":
+            avgbut = st.toggle('Average', key=f'tab{key}avg')
+            if avgbut:
+                columns += ["Average"]
+            G1but = st.toggle('G1',True, disabled=True, key=f'tab{key}G1')
+            if G1but:
+                columns += ["G1"]
+            G2but = st.toggle('G2', key=f'tab{key}G2')
+            if G2but:
+                columns += ["G2"]
+            G3but = st.toggle('G3', key=f'tab{key}G3')
+            if G3but:
+                columns += ["G3"]
+            colorscheme = select_bar_column_pallete(columns, period)
+
+        if period == "G2":
+            avgbut = st.toggle('Average', key=f'tab{key}avg')
+            if avgbut:
+                columns += ["Average"]
+            G1but = st.toggle('G1', key=f'tab{key}G1')
+            if G1but:
+                columns += ["G1"]
+            G2but = st.toggle('G2', True, disabled=True, key=f'tab{key}G2')
+            if G2but:
+                columns += ["G2"]
+            G3but = st.toggle('G3', key=f'tab{key}G3')
+            if G3but:
+                columns += ["G3"]
+            colorscheme = select_bar_column_pallete(columns, period)
+
+        if period == "G3":
+            avgbut = st.toggle('Average', key=f'tab{key}avg')
+            if avgbut:
+                columns += ["Average"]
+            G1but = st.toggle('G1', key=f'tab{key}G1')
+            if G1but:
+                columns += ["G1"]
+            G2but = st.toggle('G2', key=f'tab{key}G2')
+            if G2but:
+                columns += ["G2"]
+            G3but = st.toggle('G3', True, disabled=True, key=f'tab{key}G3')
+            if G3but:
+                columns += ["G3"]
+            colorscheme = select_bar_column_pallete(columns, period)
+    with col1:
+        averages = students.groupby(variable)[columns].mean().reset_index()
+        fig = px.bar(averages, x=variable, y=columns, title= title,
+            barmode='group', color_discrete_sequence= colorscheme) 
+        fig.update_layout(xaxis_title=xaxis_title, yaxis_title=yaxis_title)
+        fig.update_yaxes(autorangeoptions_minallowed=4)
+        if ticktext != 0:
+            fig.update_xaxes(ticktext=ticktext, tickvals=tickvals)
+        st.plotly_chart(fig, use_container_width=True)  
+
+def plain_dist(variable, varname='default', title=0, xaxis_title='x', yaxis_title=0, ticktext=0,tickvals=0, key=0):
+    counts = students[variable].value_counts().reset_index()
+    if varname == 'default':
+        title=f'{variable.title()} Value Counts'
+    else:
+        title=f'{varname} Value Counts'
+        xaxis_title=varname
+    counts.columns = [counts.columns[0].title(), counts.columns[1].title()]
+    fig = px.bar(counts, x=counts.columns[0], y=counts.columns[1], title=title)
+    if xaxis_title != 'x':
+        fig.update_layout(xaxis_title=xaxis_title)
+    if yaxis_title != 0:
+        fig.update_layout(yaxis_title=yaxis_title)
+    if ticktext != 0:
+        fig.update_xaxes(ticktext=ticktext, tickvals=tickvals)
+    
+    st.plotly_chart(fig, use_container_width=True) 
+
+def pass_fail_dist(variable, varname='default', title=0, xaxis_title='x', yaxis_title=0, ticktext=0,tickvals=0, barmode='group', key=0):
+    
+    
+    col1, col2 = st.columns([1,1])
+    if varname == 'default':
+        title=f'{variable.title()} Pass/Fail Rates'
+    else:
+        title=f'{varname} Pass/Fail Rates'
+        xaxis_title=varname
+    
+    with col1:
+        percent = st.toggle('Display Proportions Instead of Counts', False, key=f'tab{key}perc')
+    with col2:
+        stack = st.toggle('Display Stacked Graph', False, key=f'tab{key}stack')
+        if stack == True:
+            barmode = 'stack'
+
+    if percent == True:
+        counts = students.groupby(variable)[["pass"]].value_counts(normalize=True).reset_index()
+        counts.columns = [counts.columns[0].title(), counts.columns[1].title(), counts.columns[2].title()]
+        fig = px.bar(counts, x=counts.columns[0], y=counts.columns[2], color=counts.columns[1], title= title, barmode=barmode, color_discrete_sequence=['#D0D9CD','red'])
+    else:
+        counts = students.groupby(variable)[["pass"]].value_counts().reset_index()
+        counts.columns = [counts.columns[0].title(), counts.columns[1].title(), counts.columns[2].title()]
+        fig = px.bar(counts, x=counts.columns[0], y=counts.columns[2], color=counts.columns[1], title= title, barmode=barmode, color_discrete_sequence=['#D0D9CD','red'])
+    
+
+
+    if xaxis_title != 'x':
+        fig.update_layout(xaxis_title=xaxis_title)
+    if yaxis_title != 0:
+        fig.update_layout(yaxis_title=yaxis_title)
+    if ticktext != 0:
+        fig.update_xaxes(ticktext=ticktext, tickvals=tickvals)
+    
+    st.plotly_chart(fig, use_container_width=True) 
+
 st.header("What Affects Student Success?")
 
-tab2, tab3, tab4, tab5, tab6, tab7, tab1 = st.tabs(["Demographics", "Parental information", "School information", "School performance", "Extracurriculars", "Support", "Introduction"])
- 
-with tab2:
 
-    demographics = students[["age","sex","address","famsize","G1","G2","G3","Average"]] 
-    st.subheader("Let's choose a variable to look at")
-    data_choice = st.selectbox("##### Choose a variable", ["age","sex","address","family size"])
-    graphtype = st.radio("What would you like to see?", ['Comparison of Averages over time', 'General distribution of variable'])
-    if graphtype == 'Comparison of Averages over time':
-        period = st.selectbox("Choose a Time Period to Highlight", ["Average", "G1", "G2", "G3"])
+with st.sidebar:
+    selected = option_menu("Main Menu", ["Home", "Interactive Data Explorer", ], 
+        icons=['house', 'file-bar-graph'], menu_icon="cast", default_index=1)
+    selected
 
-        col1, col2 = st.columns([5,1])
-        if data_choice == 'age':
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True)
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True)
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
+#"Summary" 'card-text'
 
-                if period == "G2":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True)
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G3":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True)
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = demographics.groupby('age')[columns].mean().reset_index()
-                fig = px.bar(averages, x='age', y=columns, title='Average Score by Age',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Age", yaxis_title="Average Score")
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True)  
-
-        if data_choice == 'sex':
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True)
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True)
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G2":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True)
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G3":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True)
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = demographics.groupby('sex')[columns].mean().reset_index()
-                fig = px.bar(averages, x='sex', y=columns, title='Average Score by Sex',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Sex", yaxis_title="Average Score")
-                fig.update_yaxes(range=[4, None])
-                st.plotly_chart(fig, use_container_width=True)  
-
-
-        if data_choice == 'address':
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True)
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True)
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G2":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True)
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G3":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True)
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = demographics.groupby('address')[columns].mean().reset_index()
-                fig = px.bar(averages, x='address', y=columns, title='Average Score by Address',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Address", yaxis_title="Average Score")
-                fig.update_yaxes(range=[4, None])
-                st.plotly_chart(fig, use_container_width=True)  
-        if data_choice == 'family size':
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True)
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True)
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G2":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True)
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G3":
-                    avgbut = st.toggle('Average')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True)
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = demographics.groupby('famsize')[columns].mean().reset_index()
-                fig = px.bar(averages, x='famsize', y=columns, title='Average Score by Family Size',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Family Size", yaxis_title="Average Score")
-                fig.update_yaxes(range=[4, None])
-                st.plotly_chart(fig, use_container_width=True)  
-
-    if graphtype == 'General distribution of variable':
-        if data_choice == 'age':
-            counts = demographics['age'].value_counts().reset_index()
-            counts.columns = ['Age', 'Count']
-            fig = px.bar(counts, x='Age', y='Count', title='Age Value Counts', color_discrete_sequence=['orange'])
-            fig.update_layout(xaxis_title="Age", yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True)  
-        if data_choice == 'sex':
-            counts = demographics['sex'].value_counts().reset_index()
-            counts.columns = ['Sex', 'Count']
-            fig = px.bar(counts, x='Sex', y='Count', title='Sex Value Counts', color_discrete_sequence=['orange'])
-            fig.update_layout(xaxis_title="Sex", yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True)
-        if data_choice == 'address':
-            counts = demographics['address'].value_counts().reset_index()
-            counts.columns = ['Address', 'Count']
-            fig = px.bar(counts, x='Address', y='Count', title='Address Value Counts', color_discrete_sequence=['orange'])
-            fig.update_layout(xaxis_title="Address", yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True) 
-        if data_choice == 'family size':
-            counts = demographics['famsize'].value_counts().reset_index()
-            counts.columns = ['Family Size', 'Count']
-            fig = px.bar(counts, x='Family Size', y='Count', title='Family Size Value Counts', color_discrete_sequence=['orange'])
-            fig.update_layout(yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True) 
-with tab3:
-    parents = students[["Pstatus","Medu","Fedu","Mjob","Fjob","G1","G2","G3","Average"]] 
-    st.subheader("Let's choose a variable to look at")
-    data_choice = st.selectbox("##### Choose a variable", ["Parent's cohabitation status","Mother's education Level","Father's education Level", "Mother's Job", "Father's Job","guardian"])
-    graphtype3 = st.radio("What would you like to see?", ['Comparison of Averages over time', 'General distribution of variable'], key='tab3graph')
-    if graphtype3 == 'Comparison of Averages over time':
-        period = st.selectbox("Choose a Time Period to Highlight", ["Average", "G1", "G2", "G3"], key='tab3period')
-        col1, col2 = st.columns([5,1])
-        if data_choice == "Parent's cohabitation status":
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('Pstatus')[columns].mean().reset_index()
-                fig = px.bar(averages, x='Pstatus', y=columns, title='Average Score by Cohabitation Status',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Age", yaxis_title="Average Score")
-                fig.update_xaxes(ticktext=['Apart', 'Together'], tickvals=['A', 'T'])
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True)  
-        if data_choice == "Mother's education Level":
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-            with col1:
-
-                averages = students.groupby('Medu')[columns].mean().reset_index()
-                fig = px.bar(averages, x='Medu', y=columns, title="Average Score by Mother's education Status",
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Mother's education Level", yaxis_title="Average Score")
-                fig.update_xaxes(ticktext=['None', 'Elementary', 'Middleschool', 'Highschool', "College+"], tickvals=[0,1,2,3,4])
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True)  
-        if data_choice == "Father's education Level":
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('Fedu')[columns].mean().reset_index()
-                fig = px.bar(averages, x='Fedu', y=columns, title="Average Score by Father's education status",
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Father's education Level", yaxis_title="Average Score")
-                fig.update_xaxes(ticktext=['None', 'Elementary', 'Middleschool', 'Highschool', "College+"], tickvals=[0,1,2,3,4])
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True)  
-        if data_choice == "Mother's Job":
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('Mjob')[columns].mean().reset_index()
-                fig = px.bar(averages, x='Mjob', y=columns, title="Average Score by Mother's Job",
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Mother's Job", yaxis_title="Average Score")
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True)  
-        if data_choice == "Father's Job":
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('Fjob')[columns].mean().reset_index()
-                fig = px.bar(averages, x='Fjob', y=columns, title="Average Score by Father's Job",
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Father's Job", yaxis_title="Average Score")
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True) 
-
-        if data_choice == "guardian":
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab3avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab3g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab3g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab3g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('guardian')[columns].mean().reset_index()
-                fig = px.bar(averages, x='guardian', y=columns, title="Average Score by Guardian",
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Father's Job", yaxis_title="Average Score")
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True) 
-            
-    if graphtype3 == 'General distribution of variable':
-
-        if data_choice == "Parent's cohabitation status":
-            counts = students['Pstatus'].value_counts().reset_index()
-            counts.columns = ['Cohabition Status', 'Count']
-            fig = px.bar(counts, x='Cohabition Status', y='Count', title='Cohabitation Status Value Counts', color_discrete_sequence=['orange'])
-            fig.update_layout(yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True) 
-
-        if data_choice == "Mother's education Level":
-            counts = students['Medu'].value_counts().reset_index()
-            counts.columns = ["Mother's education Level", 'Count']
-            fig = px.bar(counts, x="Mother's education Level", y='Count', title="Value Counts by Mother's Education", color_discrete_sequence=['orange'])
-            fig.update_layout(yaxis_title="Number of Individuals")
-            fig.update_xaxes(ticktext=['None', 'Elementary', 'Middleschool', 'Highschool', "College+"], tickvals=[0,1,2,3,4])
-            st.plotly_chart(fig, use_container_width=True)
-
-        if data_choice == "Father's education Level":
-            counts = students['Fedu'].value_counts().reset_index()
-            counts.columns = ["Father's education Level", 'Count']
-            fig = px.bar(counts, x="Father's education Level", y='Count', title="Value Counts by Father's Education", color_discrete_sequence=['orange'])
-            fig.update_layout(yaxis_title="Number of Individuals")
-            fig.update_xaxes(ticktext=['None', 'Elementary', 'Middleschool', 'Highschool', "College+"], tickvals=[0,1,2,3,4])
-            st.plotly_chart(fig, use_container_width=True)
-
-        if data_choice == "Mother's Job":
-            counts = students['Mjob'].value_counts().reset_index()
-            counts.columns = ["Mother's Job", 'Count']
-            fig = px.bar(counts, x="Mother's Job", y='Count', title="Value Counts by Mother's Job Type", color_discrete_sequence=['orange'])
-            fig.update_layout(yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True)
-        if data_choice == "Father's Job":
-            counts = students['Fjob'].value_counts().reset_index()
-            counts.columns = ["Father's Job", 'Count']
-            fig = px.bar(counts, x="Father's Job", y='Count', title="Value Counts by Father's Job Type", color_discrete_sequence=['orange'])
-            fig.update_layout(yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True)
-        if data_choice == "guardian":
-            counts = students['guardian'].value_counts().reset_index()
-            counts.columns = ["Guardian", 'Count']
-            fig = px.bar(counts, x="Guardian", y='Count', title="Value Counts by Guardian", color_discrete_sequence=['orange'])
-            fig.update_layout(yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True)
-
-with tab4:
-    st.subheader("Let's choose a variable to look at")
-    data_choice = st.selectbox("##### Choose a variable", ['School', 'Reason for choosing school', 'Travel time to school from home', 'Desire for higher education (higher)'])
-    graphtype = st.radio("What would you like to see?", ['Comparison of Averages over time', 'General distribution of variable'], key='tab4graph')
-    if graphtype == 'Comparison of Averages over time':
-        period = st.selectbox("Choose a Time Period to Highlight", ["Average", "G1", "G2", "G3"], key='tab4period')
-        col1, col2 = st.columns([5,1])
-        if data_choice == "School":
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('school')[columns].mean().reset_index()
-                fig = px.bar(averages, x='school', y=columns, title='Average Score by School',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="School", yaxis_title="Average Score")
-                fig.update_xaxes(ticktext=['Gabriel Pereira', 'Mousinho da Silveira'], tickvals=['GP','MS'])
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True) 
+if selected == "Home":
+    tab1, tab2, tab3 = st.tabs(["Introduction", "About", "Data Overview"])
+    with tab1:
+        st.subheader("Lets explore Student Success!")
+        st.image("student.webp")
+        st.markdown("Student success is a multifaceted affair combining various psychological, demographical, and social factors. The purpose of the current project is to facilitate the exploration of some of these variables in hopes that one might gain a more nuanced understanding regarding the ways in which these components influence and inform the academic acheivements of high school students.")
+        st.subheader("What Defines Success?")
+        st.markdown("We will define \'Success\', as a students ability to understand the material distrubuted to them throughout their time taking the course. For the purposes of this project, we will measure success using a students final grade in the respective class, with a score equal or above 10 representing \'success\' and a score below 10 representing \'failure\'. It is important to note that this method of defining student success is problematically reductionalist for multiple reasons, but due to constraints in both resoruces and understanding, this was the best metric available.")
+        st.markdown("Continue reading in the \'About\' or \'Data Overview\' tabs to learn more about the dataset used in this project, or click around in the Interactive Data Explorer to start exploring!")
+    with tab2: 
+        st.subheader("About this Dataset:")
         
-        if data_choice == 'Reason for choosing school':
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
+        st.markdown("These datasets were collected by Paulo Cortez and Alice Silva in 2006 during a study aimed at assessing student achievement in secondary school. Specifically, data was collected from a total of 788 high school students located in two public schools from the Alentejo region of Portugal, Gabriel Pereira and Mousinho da Silveira. A total of two datasets were collected, a collection of Math Scores (with 395 records) and Portuguese Scores (with 649 records) These two classes in particular were chosen due to the critical role they play in subsequential classes. For example, researchers identify physics and history as core classes that build off of the fundamental understanding of Math and Portuguese (in Portugal specifically). Thus, a student's success in their academic future, as predicted by researchers, is contingent on their understanding of these two core classes.")
+        st.markdown("Continue below to view the datasets in their original states, and a description of each variable and what it represents.")
+        viewdata = st.selectbox("Which dataset would you like to display?", ["None", "Math Scores Dataset", "Portuguese Scores Dataset"])
+        if viewdata == "Math Scores Dataset":
+            st.write(pd.read_csv("student-mat.csv"))
+        if viewdata == "Portuguese Scores Dataset":
+            st.write(pd.read_csv("student-por.csv"))
 
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
+        st.subheader("Description of Variables:")
+        attributes = '''
+            **school** - student's school (binary: 'GP' - Gabriel Pereira or 'MS' - Mousinho da Silveira)\\
+            **sex** - student's sex (binary: 'F' - female or 'M' - male)\\
+            **age** - student's age (numeric: from 15 to 22)\\
+            **address** - student's home address type (binary: 'U' - urban or 'R' - rural)\\
+            **famsize** - family size (binary: 'LE3' - less or equal to 3 or 'GT3' - greater than 3)\\
+            **Pstatus** - parent's cohabitation status (binary: 'T' - living together or 'A' - apart)\\
+            **Medu** - mother's education (numeric: 0 - none, 1 - primary education (4th grade), 2 – 5th to 9th grade, 3 – secondary education or 4 – higher education)\\
+            **Fedu** - father's education (numeric: 0 - none, 1 - primary education (4th grade), 2 – 5th to 9th grade, 3 – secondary education or 4 – higher education)\\
+            **Mjob** - mother's job (nominal: 'teacher', 'health' care related, civil 'services' (e.g. administrative or police), 'at_home' or 'other')\\
+            **Fjob** - father's job (nominal: 'teacher', 'health' care related, civil 'services' (e.g. administrative or police), 'at_home' or 'other')\\
+            **reason** - reason to choose this school (nominal: close to 'home', school 'reputation', 'course' preference or 'other')\\
+            **guardian** - student's guardian (nominal: 'mother', 'father' or 'other')\\
+            **traveltime** - home to school travel time (numeric: 1 - <15 min., 2 - 15 to 30 min., 3 - 30 min. to 1 hour, or 4 - >1 hour)\\
+            **studytime** - weekly study time (numeric: 1 - <2 hours, 2 - 2 to 5 hours, 3 - 5 to 10 hours, or 4 - >10 hours)\\
+            **failures** - number of past class failures (numeric: n if 1<=n<3, else 4)\\
+            **schoolsup** - extra educational support (binary: yes or no)\\
+            **famsup** - family educational support (binary: yes or no)\\
+            **paid** - extra paid classes within the course subject (Math or Portuguese) (binary: yes or no)\\
+            **activities** - extra-curricular activities (binary: yes or no)\\
+            **nursery** - attended nursery school (binary: yes or no)\\
+            **higher** - wants to take higher education (binary: yes or no)\\
+            **internet** - Internet access at home (binary: yes or no)\\
+            **romantic** - with a romantic relationship (binary: yes or no)\\
+            **famrel** - quality of family relationships (numeric: from 1 - very bad to 5 - excellent)\\
+            **freetime** - free time after school (numeric: from 1 - very low to 5 - very high)\\
+            **goout** - going out with friends (numeric: from 1 - very low to 5 - very high)\\
+            **Dalc** - workday alcohol consumption (numeric: from 1 - very low to 5 - very high)\\
+            **Walc** - weekend alcohol consumption (numeric: from 1 - very low to 5 - very high)\\
+            **health** - current health status (numeric: from 1 - very bad to 5 - very good)\\
+            **absences** - number of school absences (numeric: from 0 to 93)\n
+            These grades are related with the course subject, Math or Portuguese:\\
+            **G1** - first period grade (numeric: from 0 to 20)\\
+            **G2** - second period grade (numeric: from 0 to 20)\\
+            **G3** - final grade (numeric: from 0 to 20, output target)\\
+            '''
+        st.write(attributes)
 
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('reason')[columns].mean().reset_index()
-                fig = px.bar(averages, x='reason', y=columns, title='Average Score by Reason',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Reason", yaxis_title="Average Score")
-                fig.update_xaxes(ticktext=['Course Preference', 'Close to Home', 'Other', 'Reputation'], tickvals=[0,1,2,3])
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True) 
-        if data_choice == 'Travel time to school from home':
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
+    with tab3:
+        d1 = pd.read_csv("student-mat.csv")
+        d2 = pd.read_csv("student-por.csv")
+        st.subheader("Lets take a more general look at our data.")
+        describe = st.selectbox("Would you like to view summary statistics of the numerical variables?", ["No", "Yes, summarize the Math dataset", "Yes, summarize the Portuguese dataset"])
+        if describe == "Yes, summarize the Math dataset":
+            st.write(d1.describe())
+        if describe == "Yes, summarize the Portuguese dataset":
+            st.write(d2.describe())
 
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
+        st.write("Since our target variable is student success, lets take a look at pass/fail rates by class.")
+        d1['pass'] = np.where(d1['G3']>=10, 'pass','fail')
+        d2['pass'] = np.where(d2['G3']>=10, 'pass','fail')
+        data = {
+        'Math': d1['pass'].value_counts(normalize=True),
+        'Portugese': d2['pass'].value_counts(normalize=True)}
 
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('traveltime')[columns].mean().reset_index()
-                fig = px.bar(averages, x='traveltime', y=columns, title='Average Score by Travel Time',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Travel Time", yaxis_title="Average Score")
-                fig.update_xaxes(ticktext=['<15 min', '15 to 30 min', '30 min. to 1 hour', '>1 hour'], tickvals=[1,2,3,4])
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True) 
-        if data_choice == 'Desire for higher education (higher)':
-            with col2:
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
+        counts = pd.DataFrame(data, index=['pass','fail'])
 
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
+        fig = px.bar(counts.T, x=['Math','Portugese'], y=['pass','fail'], title='Percentage Pass/Fail by Class', barmode='group', color_discrete_sequence=['#A1B38E','#FF2310'])
+        fig.update_layout(yaxis_title="Percentages", xaxis_title = "Class")
 
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab4avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab4g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab4g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab4g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('higher')[columns].mean().reset_index()
-                fig = px.bar(averages, x='higher', y=columns, title='Average Score by Desire for Higher Education',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title="Desire", yaxis_title="Average Score")
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True) 
+        st.plotly_chart(fig) 
 
-    if graphtype == 'General distribution of variable':
-        if data_choice == "School":
-            counts = students['school'].value_counts().reset_index()
-            counts.columns = ['School', 'Count']
-            fig = px.bar(counts, x='School', y='Count', title='Value Counts by School', color_discrete_sequence=['orange'])
-            fig.update_xaxes(ticktext=['Course Preference', 'Close to Home', 'Other', 'Reputation'], tickvals=[0,1,2,3])
-            fig.update_layout(yaxis_title="Number of Individuals")
+        st.write("Already we can notice an alarming trend, with about 33 percent of responants scoring a failing grade in their mathematics courses, and a 15 percent fail rate amongst portuguese students.")
+    
+    
+
+if selected == "Interactive Data Explorer":
+    
+    data_choice = st.selectbox("##### Choose a dataset to work with:", ["Math Scores", "Portuguese Scores"])
+    if data_choice == "Math Scores":
+        students = pd.read_csv("student-mat.csv")
+    if data_choice == "Portuguese Scores":
+        students = pd.read_csv("student-por.csv")
+
+    students['Average'] = students[['G1', 'G2', 'G3']].mean(axis=1).round(2)
+    students['pass'] = np.where(students['G3']>=10, 'pass','fail')
+    tab2, tab3, tab4, tab5, tab6, tab7= st.tabs([ "Demographics", "Parental information", "School information", "School performance", "Extracurriculars", "Support"])
+
+    with tab2:
+        key = 2
+        demographics = students[["age","sex","address","famsize","G1","G2","G3","Average"]] 
+        st.subheader("Let's choose a variable to look at")
+        data_choice = st.selectbox("##### Choose a variable", ["Age","Sex","Address Type","Family Size"])
+        graphtype = st.radio("What would you like to see?", ['Pass/Fail Rates by Variable', 'Comparison of Average Scores Over Time', 'General Distribution of Variable'])
+        ticktext=0
+        tickvals=0
+        varname = 'default'
+        if data_choice == 'Age':
+            variable='age'
+            ticktext=[15,16,17,18,19,20,21,22]
+            tickvals=[15,16,17,18,19,20,21,22]
+        if data_choice == 'Sex':
+            variable='sex'
+            ticktext=['Female','Male']
+            tickvals=['F','M']
+        if data_choice == 'Address Type':
+            variable='address'
+            ticktext=['Rural','Urban']
+            tickvals=['R','U']
+        if data_choice == 'Family Size':
+            variable='famsize'
+            ticktext=['Greater than 3', 'Less than or Equal to 3']
+            tickvals=['GT3', 'LE3']
+            varname = 'Family Size'
             
 
-            st.plotly_chart(fig, use_container_width=True) 
+        if graphtype == 'Comparison of Average Scores Over Time':
+        
 
-        if data_choice == 'Reason for choosing school':
-            counts = students['reason'].value_counts().reset_index()
-            counts.columns = ['Reason', 'Count']
-            fig = px.bar(counts, x='Reason', y='Count', title='Value Counts by Reason', color_discrete_sequence=['orange'])
-            fig.update_layout(yaxis_title="Number of Individuals")
-            fig.update_xaxes(ticktext=['Course Preference', 'Close to Home', 'Other', 'Reputation'], tickvals=[0,1,2,3])
-            st.plotly_chart(fig, use_container_width=True) 
+            
+            if varname != 'default':
+                set_comparison_select(variable, varname = varname, ticktext=ticktext, tickvals=tickvals, key=key)
+            else:
+                set_comparison_select(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+            
+        if graphtype == 'General Distribution of Variable':
+            if varname != 'default':
+                plain_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                plain_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+        if graphtype == 'Pass/Fail Rates by Variable':
+            if varname != 'default':
+                pass_fail_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals,key=key)
+            else:
+                pass_fail_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
 
-        if data_choice == 'Travel time to school from home':
-            counts = students['traveltime'].value_counts().reset_index()
-            fig = px.bar(counts, x=counts.iloc[:,0], y=counts.iloc[:,1], title=f'Value Counts by {data_choice}', color_discrete_sequence=['orange'])
-            fig.update_layout(xaxis_title=data_choice, yaxis_title="Number of Individuals")
-            fig.update_xaxes(ticktext=['<15 min', '15 to 30 min', '30 min. to 1 hour', '>1 hour'], tickvals=[1,2,3,4])
-            st.plotly_chart(fig, use_container_width=True) 
 
-        if data_choice == 'Desire for higher education (higher)':
-            counts = students['higher'].value_counts().reset_index()
-            fig = px.bar(counts, x=counts.iloc[:,0], y=counts.iloc[:,1], title=f'Value Counts by {data_choice}', color_discrete_sequence=['orange'])
-            fig.update_layout()
-            fig.update_layout(xaxis_title=data_choice, yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True) 
 
-with tab5:
-    st.subheader("Let's choose a variable to look at")
-    data_choice = st.selectbox("##### Choose a variable", ['Weekly Study Time', 'Number of Failures', 'Number of Absences'])
-    graphtype = st.radio("What would you like to see?", ['Comparison of Averages over time', 'General distribution of variable'], key='tab5graph')
-    if graphtype == 'Comparison of Averages over time':
-        period = st.selectbox("Choose a Time Period to Highlight", ["Average", "G1", "G2", "G3"], key='tab5period')
-        col1, col2 = st.columns([5,1])
+    with tab3:
+        key = 3
+        parents = students[["Pstatus","Medu","Fedu","Mjob","Fjob","G1","G2","G3","Average"]] 
+        st.subheader("Let's choose a variable to look at")
+        data_choice = st.selectbox("##### Choose a variable", ["Parent's Cohabitation Status","Mother's Education Level","Father's Education Level", "Mother's Job", "Father's Job","Primary Guardian"])
+        graphtype = st.radio("What would you like to see?", ['Pass/Fail Rates by Variable', 'Comparison of Average Scores Over Time', 'General Distribution of Variable'], key='tab3graph')
+        ticktext=0
+        tickvals=0
+        varname = 'default'
+
+        if data_choice == "Parent's Cohabitation Status":
+            variable = 'Pstatus'
+            ticktext=['Apart', 'Together']
+            tickvals=['A', 'T']
+            varname = "Parent's Cohabitation Status"
+
+        if data_choice == "Mother's Education Level":
+            variable = "Medu"
+            varname = "Mother's Education Level"
+            ticktext=['None', 'Up to 4th Grade', 'Up to 9th Grade', 'Secondary Education', 'Higher Education']
+            tickvals=[0,1,2,3,4]
+
+        if data_choice == "Father's Education Level":
+            variable = "Fedu"
+            varname = "Father's Education Level"
+            ticktext=['None', 'Up to 4th Grade', 'Up to 9th Grade', 'Secondary Education', 'Higher Education']
+            tickvals=[0,1,2,3,4]
+
+
+        if data_choice == "Mother's Job":
+            variable = "Mjob" 
+            varname = "Mother's Job Type"
+            ticktext=['Stay at Home', 'Health Sector', 'Other', 'Service Sector', 'Education Sector']
+            tickvals=['at_home', 'health', 'other','services', 'teacher']
+        if data_choice =="Father's Job":
+            variable = "Fjob"
+            varname = "Father's Job"
+            ticktext=['Stay at Home', 'Health Sector', 'Other', 'Service Sector', 'Education Sector']
+            tickvals=['at_home', 'health', 'other','services', 'teacher']
+        if data_choice == "Primary Guardian":
+            variable = "guardian"
+            varname = "Primary Guardian"
+            ticktext = ['Father', 'Mother', 'Other']
+            tickvals = ['father','mother','other']
+
+
+        if graphtype == 'Comparison of Average Scores Over Time':
+            
+
+            
+            if varname != 'default':
+                set_comparison_select(variable, varname = varname, ticktext=ticktext, tickvals=tickvals, key=key)
+            else:
+                set_comparison_select(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+            
+        if graphtype == 'General Distribution of Variable':
+            if varname != 'default':
+                plain_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                plain_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+        if graphtype == 'Pass/Fail Rates by Variable':
+            if varname != 'default':
+                pass_fail_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                pass_fail_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+    with tab4:
+        key = 4
+        st.subheader("Let's choose a variable to look at")
+        data_choice = st.selectbox("##### Choose a variable", ['School', 'Reason for Choosing School', 'Travel Time to School from Home'])
+        graphtype = st.radio("What would you like to see?", ['Pass/Fail Rates by Variable', 'Comparison of Average Scores Over Time', 'General Distribution of Variable'], key=f'tab{key}graph')
+        
+        
+        ticktext=0
+        tickvals=0
+        varname = 'default'
+        
+        if data_choice =='School':
+            variable = 'school'
+        if data_choice =='Reason for Choosing School':
+            variable = 'reason'
+        if data_choice == 'Travel Time to School from Home':
+            variable = 'traveltime'
+            varname = "Travel Time"
+            ticktext = ['Less than 15 min', '15 to 30 min', '30 min to 1 hour', 'Over 1 hour']
+            tickvals = [1,2,3,4]
+       # if data_choice == 'Desire for Higher Education':
+       #     variable = 'higher'
+
+
+        if graphtype == 'Comparison of Average Scores Over Time':
+  
+
+            
+            if varname != 'default':
+                set_comparison_select(variable, varname = varname, ticktext=ticktext, tickvals=tickvals, key=key)
+            else:
+                set_comparison_select(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+            
+        if graphtype == 'General Distribution of Variable':
+            if varname != 'default':
+                plain_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                plain_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+        if graphtype == 'Pass/Fail Rates by Variable':
+            if varname != 'default':
+                pass_fail_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                pass_fail_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+
+    with tab5:
+        key = 5
+        st.subheader("Let's choose a variable to look at")
+        data_choice = st.selectbox("##### Choose a variable", ['Weekly Study Time', 'Number of Failures', 'Number of Absences'])
+        graphtype = st.radio("What would you like to see?", ['Pass/Fail Rates by Variable', 'Comparison of Average Scores Over Time', 'General Distribution of Variable'], key=f'tab{key}graph')
+        
+        
+        ticktext=0
+        tickvals=0
+        varname = 'default'
+        
         if data_choice == 'Weekly Study Time':
-            with col2:    
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('studytime')[columns].mean().reset_index()
-                fig = px.bar(averages, x=averages.iloc[:,0], y=columns, title=f'Average Score by {data_choice}',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title=data_choice, yaxis_title="Average Score")
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True) 
-
+            variable = 'studytime'
+            varname = 'Weekly Study Time'
+            ticktext = ['Less than 2 hours', '2 to 5 hours', '5 to 10 hours', 'More than 10 hours']
+            tickvals = [1,2,3,4]
         if data_choice == 'Number of Failures':
-            with col2:    
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('failures')[columns].mean().reset_index()
-                fig = px.bar(averages, x=averages.iloc[:,0], y=columns, title=f'Average Score by {data_choice}',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title=data_choice, yaxis_title="Average Score")
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True) 
+            variable = 'failures' 
+            varname = "Number of Failures"
+            ticktext = ['None',1,2,'3 or More']
+            tickvals = [0,1,2,3]
         if data_choice == 'Number of Absences':
-            with col2:    
-                columns = []
-                if period == "Average":
-                    avgbut = st.toggle('Average', True, disabled=True, key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-                
-                if period == "G1":
-                    avgbut = st.toggle('Average', key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1',True, disabled=True, key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G2":
-                    avgbut = st.toggle('Average', key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', True, disabled=True, key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-
-                if period == "G3":
-                    avgbut = st.toggle('Average', key='tab5avg')
-                    if avgbut:
-                        columns += ["Average"]
-                    G1but = st.toggle('G1', key='tab5g1')
-                    if G1but:
-                        columns += ["G1"]
-                    G2but = st.toggle('G2', key='tab5g2')
-                    if G2but:
-                        columns += ["G2"]
-                    G3but = st.toggle('G3', True, disabled=True, key='tab5g3')
-                    if G3but:
-                        columns += ["G3"]
-                    colorscheme = select_bar_column_pallete(columns, period)
-            with col1:
-                averages = students.groupby('absences')[columns].mean().reset_index()
-                fig = px.bar(averages, x=averages.iloc[:,0], y=columns, title=f'Average Score by {data_choice}',
-                    barmode='group', color_discrete_sequence= colorscheme) 
-                fig.update_layout(xaxis_title=data_choice, yaxis_title="Average Score")
-                fig.update_yaxes(autorangeoptions_minallowed=4)
-                st.plotly_chart(fig, use_container_width=True) 
-
-    if graphtype == 'General distribution of variable':
-        if data_choice == 'Weekly Study Time':
-            counts = students['studytime'].value_counts().reset_index()
-            fig = px.bar(counts, x=counts.iloc[:,0], y=counts.iloc[:,1], title=f'Value Counts by {data_choice}', color_discrete_sequence=['orange'])
-            fig.update_layout()
-            fig.update_layout(xaxis_title=data_choice, yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True) 
-        if data_choice == 'Number of Failures':
-            counts = students['failures'].value_counts().reset_index()
-            fig = px.bar(counts, x=counts.iloc[:,0], y=counts.iloc[:,1], title=f'Value Counts by {data_choice}', color_discrete_sequence=['orange'])
-            fig.update_layout()
-            fig.update_layout(xaxis_title=data_choice, yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True) 
-        if data_choice == 'Number of Absences':
-            counts = students['absences'].value_counts().reset_index()
-            fig = px.bar(counts, x=counts.iloc[:,0], y=counts.iloc[:,1], title=f'Value Counts by {data_choice}', color_discrete_sequence=['orange'])
-            fig.update_layout()
-            fig.update_layout(xaxis_title=data_choice, yaxis_title="Number of Individuals")
-            st.plotly_chart(fig, use_container_width=True) 
-
-with tab1:
-    st.subheader("Intro work in progress...")
-    data_choice = st.selectbox("##### Choose a dataset", students.columns)
-
-    fig, (ax1, ax2, ax3) = plt.subplots(ncols = 3, figsize=(14,4), sharey = True)
-
-    sns.countplot(x=students['G1'], ax=ax1, palette=set_select_palette(students['G1'],0))
-    sns.countplot(x=students['G2'],ax=ax2 ,palette=set_select_palette(students['G2'],0))
-
-    sns.countplot(x=students['G3'], ax=ax3, palette=set_select_palette(students['G3'],0))
-    #g2 without zeros
-    g2_0 = students.loc[students['G2']==0]
-    g2_no0 = students.loc[students['G2']!=0]
-    g2_no0['G2'].mean()
-    #g3 without zeros
-    g3_0 = students.loc[students['G3']==0]
-    g3_no0 = students.loc[students['G3']!=0]
-    g3_no0['G3'].mean()
+            variable = 'absences'
+            varname = "Number of Absences"
+        
 
 
-    avg_data = pd.DataFrame({'Dataset': ['G1', 'G1','G2','G2','G3','G3'], 'Zeros':['with','without','with','without','with','without'], 'Average': [students['G1'].mean(),0,students['G2'].mean(),g2_no0['G2'].mean(),students['G3'].mean(), g3_no0['G3'].mean()]})
-    #barplot w/without zeros
-    fig2 = px.bar(avg_data, x='Dataset', y='Average', title='With Zeroes vs Without',
-                barmode='group', color='Zeros', color_discrete_sequence= set_select_palette(avg_data['Zeros'],'without', max_color = 'orange'))  # Set barmode to 'group' for grouped bars
+        if graphtype == 'Comparison of Average Scores Over Time':
+  
 
-    # Customize the layout (optional)
-    fig2.update_layout(xaxis_title="Dataset", yaxis_title="Average Value", width=800, height=500)
+            
+            if varname != 'default':
+                set_comparison_select(variable, varname = varname, ticktext=ticktext, tickvals=tickvals, key=key)
+            else:
+                set_comparison_select(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+            
+        if graphtype == 'General Distribution of Variable':
+            if varname != 'default':
+                plain_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                plain_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+        if graphtype == 'Pass/Fail Rates by Variable':
+            if varname != 'default':
+                pass_fail_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                pass_fail_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
 
-    # Show the plot
-    st.plotly_chart(fig2) 
+
+    with tab6:
+        key = 6
+        st.subheader("Let's choose a variable to look at")
+        data_choice = st.selectbox("##### Choose a variable", ['Activity Participation', 'Presence of a Romantic Relationship', 'Amount of Freetime', 'Time Spent with Friends', 'Workday Alcohol Consumption', 'Weekend Alcohol Consumption'])
+        graphtype = st.radio("What would you like to see?", ['Pass/Fail Rates by Variable', 'Comparison of Average Scores Over Time', 'General Distribution of Variable'], key=f'tab{key}graph')
+        
+        
+        ticktext=0
+        tickvals=0
+        varname = 'default'
+        
+        if data_choice == 'Activity Participation':
+            variable = 'activities'
+        if data_choice == 'Presence of a Romantic Relationship':
+            variable = 'romantic' 
+        if data_choice == 'Amount of Freetime':
+            variable = 'freetime' 
+        if data_choice == 'Time Spent with Friends':
+            variable = 'goout'
+        if data_choice == 'Workday Alcohol Consumption':
+            variable = 'Dalc'
+        if data_choice == 'Weekend Alcohol Consumption':
+            variable = 'Walc'
+        
+
+
+        if graphtype == 'Comparison of Average Scores Over Time':
+  
+
+            
+            if varname != 'default':
+                set_comparison_select(variable, varname = varname, ticktext=ticktext, tickvals=tickvals, key=key)
+            else:
+                set_comparison_select(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+            
+        if graphtype == 'General Distribution of Variable':
+            if varname != 'default':
+                plain_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                plain_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+        if graphtype == 'Pass/Fail Rates by Variable':
+            if varname != 'default':
+                pass_fail_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                pass_fail_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+
+
+    with tab7:
+        key = 7
+        st.subheader("Let's choose a variable to look at")
+        data_choice = st.selectbox("##### Choose a variable", ['Extra Education Support', 'Family Educational Support', 'Extra Paid Classes', 'Quality of Family Relationships', 'Health'])
+        graphtype = st.radio("What would you like to see?", ['Pass/Fail Rates by Variable', 'Comparison of Average Scores Over Time', 'General Distribution of Variable'], key=f'tab{key}graph')
+        
+        
+        ticktext=0
+        tickvals=0
+        varname = 'default'
+        
+        if data_choice == 'Extra Education Support':
+            variable = 'schoolsup'
+        if data_choice == 'Family Educational Support':
+            variable = 'famsup'
+        if data_choice == 'Extra Paid Classes':
+            variable = 'paid'
+        if data_choice == 'Quality of Family Relationships':
+            variable = 'famrel'
+        if data_choice == 'Health':
+            variable = 'health'
+        
+
+
+        if graphtype == 'Comparison of Average Scores Over Time':
+  
+
+            
+            if varname != 'default':
+                set_comparison_select(variable, varname = varname, ticktext=ticktext, tickvals=tickvals, key=key)
+            else:
+                set_comparison_select(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+            
+        if graphtype == 'General Distribution of Variable':
+            if varname != 'default':
+                plain_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                plain_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
+        if graphtype == 'Pass/Fail Rates by Variable':
+            if varname != 'default':
+                pass_fail_dist(variable, ticktext=ticktext, varname = varname, tickvals=tickvals, key=key)
+            else:
+                pass_fail_dist(variable, ticktext=ticktext, tickvals=tickvals, key=key)
