@@ -414,15 +414,15 @@ if selected == "Interactive Data Explorer":
             data = {
             'Math': len(d1),
             'Portugese': len(d2)}
-        counts = pd.DataFrame(data, index=['Count'])
-        title=f'Class Value Counts'
+            counts = pd.DataFrame(data, index=['Count'])
+            title=f'Class Value Counts'
 
 
 
-        fig = px.bar(counts.T, x=['Math','Portugese'], y='Count', title=title)
-        
-        st.plotly_chart(fig, use_container_width=True) 
-        st.write("Finally, an option is also included to view a simple bar graph of the value counts of each variable by category. Have fun exploring!")
+            fig = px.bar(counts.T, x=['Math','Portugese'], y='Count', title=title)
+            
+            st.plotly_chart(fig, use_container_width=True) 
+            st.write("Finally, an option is also included to view a simple bar graph of the value counts of each variable by category. Have fun exploring!")
     with tab2: 
         key = 2
         demographics = students[["age","sex","address","famsize","G1","G2","G3","Average"]] 
