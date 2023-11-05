@@ -176,20 +176,20 @@ st.header("What Affects Student Success?")
 
 with st.sidebar:
     selected = option_menu("Main Menu", ["Home", "Interactive Data Explorer", ], 
-        icons=['house', 'file-bar-graph'], menu_icon="cast", default_index=1)
+        icons=['house', 'file-bar-graph'], menu_icon="cast", default_index=0)
     selected
 
 #"Summary" 'card-text'
 
 if selected == "Home":
-    tab1, tab2, tab3 = st.tabs(["Introduction", "About", "Data Overview"])
+    tab1, tab2= st.tabs(["Introduction", "About this Dataset"])
     with tab1:
         st.subheader("Lets explore Student Success!")
         st.image("student.webp")
         st.markdown("Student success is a multifaceted affair combining various psychological, demographical, and social factors. The purpose of the current project is to facilitate the exploration of some of these variables in hopes that one might gain a more nuanced understanding regarding the ways in which these components influence and inform the academic acheivements of high school students.")
         st.subheader("What Defines Success?")
         st.markdown("We will define \'Success\', as a students ability to understand the material distrubuted to them throughout their time taking the course. For the purposes of this project, we will measure success using a students final grade in the respective class, with a score equal or above 10 representing \'success\' and a score below 10 representing \'failure\'. It is important to note that this method of defining student success is problematically reductionalist for multiple reasons, but due to constraints in both resoruces and understanding, this was the best metric available.")
-        st.markdown("Continue reading in the \'About\' or \'Data Overview\' tabs to learn more about the dataset used in this project, or click around in the Interactive Data Explorer to start exploring!")
+        st.markdown("Continue reading in the \'About this Dataset\' tab to learn more about the dataset used in this project, or click around in the Interactive Data Explorer to start exploring!")
     with tab2: 
         st.subheader("About this Dataset:")
         
@@ -200,6 +200,15 @@ if selected == "Home":
             st.write(pd.read_csv("student-mat.csv"))
         if viewdata == "Portuguese Scores Dataset":
             st.write(pd.read_csv("student-por.csv"))
+
+        d1 = pd.read_csv("student-mat.csv")
+        d2 = pd.read_csv("student-por.csv")
+
+        describe = st.selectbox("Would you like to view summary statistics of the numerical variables?", ["No", "Yes, summarize the Math dataset", "Yes, summarize the Portuguese dataset"])
+        if describe == "Yes, summarize the Math dataset":
+            st.write(d1.describe())
+        if describe == "Yes, summarize the Portuguese dataset":
+            st.write(d2.describe())
 
         st.subheader("Description of Variables:")
         attributes = '''
@@ -240,32 +249,7 @@ if selected == "Home":
             '''
         st.write(attributes)
 
-    with tab3:
-        d1 = pd.read_csv("student-mat.csv")
-        d2 = pd.read_csv("student-por.csv")
-        st.subheader("Lets take a more general look at our data.")
-        describe = st.selectbox("Would you like to view summary statistics of the numerical variables?", ["No", "Yes, summarize the Math dataset", "Yes, summarize the Portuguese dataset"])
-        if describe == "Yes, summarize the Math dataset":
-            st.write(d1.describe())
-        if describe == "Yes, summarize the Portuguese dataset":
-            st.write(d2.describe())
-
-        st.write("Since our target variable is student success, lets take a look at pass/fail rates by class.")
-        d1['pass'] = np.where(d1['G3']>=10, 'pass','fail')
-        d2['pass'] = np.where(d2['G3']>=10, 'pass','fail')
-        data = {
-        'Math': d1['pass'].value_counts(normalize=True),
-        'Portugese': d2['pass'].value_counts(normalize=True)}
-
-        counts = pd.DataFrame(data, index=['pass','fail'])
-
-        fig = px.bar(counts.T, x=['Math','Portugese'], y=['pass','fail'], title='Percentage Pass/Fail by Class', barmode='group', color_discrete_sequence=['#A1B38E','#FF2310'])
-        fig.update_layout(yaxis_title="Percentages", xaxis_title = "Class")
-
-        st.plotly_chart(fig) 
-
-        st.write("Already we can notice an alarming trend, with about 33 percent of responants scoring a failing grade in their mathematics courses, and a 15 percent fail rate amongst portuguese students.")
-    
+  
     
 
 if selected == "Interactive Data Explorer":
@@ -278,9 +262,168 @@ if selected == "Interactive Data Explorer":
 
     students['Average'] = students[['G1', 'G2', 'G3']].mean(axis=1).round(2)
     students['pass'] = np.where(students['G3']>=10, 'pass','fail')
-    tab2, tab3, tab4, tab5, tab6, tab7= st.tabs([ "Demographics", "Parental information", "School information", "School performance", "Extracurriculars", "Support"])
+    tab1,tab2, tab3, tab4, tab5, tab6, tab7= st.tabs([ "Tutorial", "Demographics", "Parental information", "School information", "School performance", "Extracurriculars", "Support"])
 
-    with tab2:
+    with tab1:
+        key=1
+        st.subheader("Welcome to the Interactive Data Explorer!")
+        st.write("In this section there are several different ways to go about exploring the data. Click through the example below for an idea on how to interpret each graph presented. When you feel you've grasped the gist of how to use the explorer, select a dataset above and click around to learn more about each variables! The variables have been grouped into categories (as seen above) for convienence and organization purposes. Have fun exploring!")
+        d1 = pd.read_csv("student-mat.csv")
+        d2 = pd.read_csv("student-por.csv")
+        
+    
+       
+        st.subheader("Example:")
+        graphtype = st.radio("What would you like to see?", ['Pass/Fail Rates by Variable', 'Comparison of Average Scores Over Time', 'General Distribution of Variable'], key='tab1graph')
+        if graphtype == 'Pass/Fail Rates by Variable':
+            col1, col2 = st.columns([1,1])
+            title=f'Pass/Fail Rates by Class'
+            st.write("Since our target variable is student success, lets take a look at pass/fail rates by class.")
+            
+            d1['pass'] = np.where(d1['G3']>=10, 'pass','fail')
+            d2['pass'] = np.where(d2['G3']>=10, 'pass','fail')
+            data = {
+            'Math': d1['pass'].value_counts(normalize=True),
+            'Portugese': d2['pass'].value_counts(normalize=True)}
+
+            counts = pd.DataFrame(data, index=['pass','fail'])
+
+            fig = px.bar(counts.T, x=['Math','Portugese'], y=['pass','fail'], title='Percentage Pass/Fail by Class', barmode='group', color_discrete_sequence=['#A1B38E','#FF2310'])
+            fig.update_layout(yaxis_title="Percentages", xaxis_title = "Class")
+            with col1:
+                percent = st.toggle('Display Proportions Instead of Counts', False, key=f'tab{key}perc')
+            with col2:
+                stack = st.toggle('Display Stacked Graph', False, key=f'tab{key}stack')
+                if stack == True:
+                    barmode = 'stack'
+                else:
+                    barmode = 'group'
+
+            if percent == True:
+                data = {
+            'Math': d1['pass'].value_counts(normalize=True),
+            'Portugese': d2['pass'].value_counts(normalize=True)}
+
+                counts = pd.DataFrame(data, index=['pass','fail'])
+
+                fig = px.bar(counts.T, x=['Math','Portugese'], y=['pass','fail'], title='Percentage Pass/Fail by Class', barmode=barmode, color_discrete_sequence=['#A1B38E','#FF2310'])
+                fig.update_layout(yaxis_title="Percentages", xaxis_title = "Class")
+                st.plotly_chart(fig) 
+                if barmode == 'group':
+                    st.write("When stacked mode is selected, we gain the ability to view pass fail rates based on the propotion in which they appear in each category. For example, in this graph we can notice an alarming trend, with about 33 percent of responants scoring a failing grade in their mathematics courses while a 15 percent fail rate exists amongst portuguese students.")
+                if barmode == 'stack':
+                    st.write("When viewing proportions in stacked mode, we can more easily and quickly see trends in pass fail rates when comparing category to category. For example, the red portion of the math dataset is much larger than the portuguese, indicating a larger proportion of failures in that category. This type of graph is useful when looking for trends in failure rates.")
+
+            else:
+                data = {
+            'Math': d1['pass'].value_counts(),
+            'Portugese': d2['pass'].value_counts()}
+
+                counts = pd.DataFrame(data, index=['pass','fail'])
+
+                fig = px.bar(counts.T, x=['Math','Portugese'], y=['pass','fail'], title='Percentage Pass/Fail by Class', barmode=barmode, color_discrete_sequence=['#A1B38E','#FF2310'])
+                fig.update_layout(yaxis_title="Percentages", xaxis_title = "Class")
+                st.plotly_chart(fig) 
+                if barmode == 'group':
+                    st.write("This first graph provides allows one to compare the total number of passes and failures per category. For example, we can see here that there are 265 students who passed their math classes, compared to 549 students who passed their portuguese class. This type of graph will be useful when looking to compare the total amount of passes/failures per category.")
+                if barmode == 'stack':
+                    st.write("When viewing pass/failure counts in stacked mode, we can compare the failure rates between categories within the context of the overall distribution. For example, while we previously noticed that math scores had a much higher failure rate than portugeses scores, we can also see here that there are much more portuguese records than their are in the math dataset.")
+        if graphtype == "Comparison of Average Scores Over Time":
+            period = st.selectbox("Choose a Time Period to Highlight", ["Average", "G1", "G2", "G3"], index=3, key= f'tab{key}per')
+            col1, col2 = st.columns([5,1])
+            title='Class Averages Over Time'
+
+            with col2:
+                columns = []
+                if period == "Average":
+                    avgbut = st.toggle('Average', True, disabled=True, key=f'tab{key}avg')
+                    if avgbut:
+                        columns += ["Average"]
+                    G1but = st.toggle('G1', key=f'tab{key}G1')
+                    if G1but:
+                        columns += ["G1"]
+                    G2but = st.toggle('G2', key=f'tab{key}G2')
+                    if G2but:
+                        columns += ["G2"]
+                    G3but = st.toggle('G3', key=f'tab{key}G3')
+                    if G3but:
+                        columns += ["G3"]
+                    colorscheme = select_bar_column_pallete(columns, period)
+                
+                if period == "G1":
+                    avgbut = st.toggle('Average', key=f'tab{key}avg')
+                    if avgbut:
+                        columns += ["Average"]
+                    G1but = st.toggle('G1',True, disabled=True, key=f'tab{key}G1')
+                    if G1but:
+                        columns += ["G1"]
+                    G2but = st.toggle('G2', key=f'tab{key}G2')
+                    if G2but:
+                        columns += ["G2"]
+                    G3but = st.toggle('G3', key=f'tab{key}G3')
+                    if G3but:
+                        columns += ["G3"]
+                    colorscheme = select_bar_column_pallete(columns, period)
+
+                if period == "G2":
+                    avgbut = st.toggle('Average', key=f'tab{key}avg')
+                    if avgbut:
+                        columns += ["Average"]
+                    G1but = st.toggle('G1', key=f'tab{key}G1')
+                    if G1but:
+                        columns += ["G1"]
+                    G2but = st.toggle('G2', True, disabled=True, key=f'tab{key}G2')
+                    if G2but:
+                        columns += ["G2"]
+                    G3but = st.toggle('G3', key=f'tab{key}G3')
+                    if G3but:
+                        columns += ["G3"]
+                    colorscheme = select_bar_column_pallete(columns, period)
+
+                if period == "G3":
+                    avgbut = st.toggle('Average', key=f'tab{key}avg')
+                    if avgbut:
+                        columns += ["Average"]
+                    G1but = st.toggle('G1', key=f'tab{key}G1')
+                    if G1but:
+                        columns += ["G1"]
+                    G2but = st.toggle('G2', key=f'tab{key}G2')
+                    if G2but:
+                        columns += ["G2"]
+                    G3but = st.toggle('G3', True, disabled=True, key=f'tab{key}G3')
+                    if G3but:
+                        columns += ["G3"]
+                    colorscheme = select_bar_column_pallete(columns, period)
+            with col1:
+                d1['Average'] = d1[['G1', 'G2', 'G3']].mean(axis=1).round(2)
+                d2['Average'] = d2[['G1', 'G2', 'G3']].mean(axis=1).round(2)
+                data = {
+            'Math': d1[['G1', 'G2', 'G3', 'Average']].mean().values,
+            'Portugese': d1[['G1', 'G2', 'G3', 'Average']].mean().values}
+                averages = pd.DataFrame(data, index=["G1", "G2","G3","Average"])
+                averages = averages.T       
+
+                fig = px.bar(averages, x=['Math', 'Portuguese'], y=columns, title= title,
+                    barmode='group', color_discrete_sequence= colorscheme) 
+                fig.update_layout(xaxis_title='Class', yaxis_title='Average Score')
+                fig.update_yaxes(autorangeoptions_minallowed=4)
+                st.plotly_chart(fig, use_container_width=True) 
+                st.write("The following graph allows you to compare student scores over time. Keeping in mind that our final \'success\' score is based on a students grade in their final period (the \'G3\' category), it can be informative to explore how scores might change over time. Using this graph, you can choose to add or subtract periods of time (including an average of all scores), to compare how scores change over time for each variable. Additionally, an option is included to choose which time period to highlight in order to assist with visualization.") 
+
+        if graphtype == 'General Distribution of Variable':
+            data = {
+            'Math': len(d1),
+            'Portugese': len(d2)}
+        counts = pd.DataFrame(data, index=['Count'])
+        title=f'Class Value Counts'
+
+
+
+        fig = px.bar(counts.T, x=['Math','Portugese'], y='Count', title=title)
+        
+        st.plotly_chart(fig, use_container_width=True) 
+        st.write("Finally, an option is also included to view a simple bar graph of the value counts of each variable by category. Have fun exploring!")
+    with tab2: 
         key = 2
         demographics = students[["age","sex","address","famsize","G1","G2","G3","Average"]] 
         st.subheader("Let's choose a variable to look at")
